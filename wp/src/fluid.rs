@@ -1,104 +1,95 @@
-use rand::Rng;
+use crate::emitter::Emitter;
+use egui::Color32;
 
 pub struct Fluid {
     pub width: usize,
     pub height: usize,
 
-    // Simulation parameters
     pub time: f32,
     pub diffusion: f32,
     pub viscosity: f32,
 
-    pub injection_strength: f32,
-    pub injection_radius: i32,
     pub dissipation: f32,
 
-    spawn_x: usize,
-    spawn_y: usize,
+    pub density_r: Vec<f32>,
+    pub density_g: Vec<f32>,
+    pub density_b: Vec<f32>,
 
-    pub density: Vec<f32>,
     pub px: Vec<f32>,
     pub py: Vec<f32>,
+
+    pub emitters: Vec<Emitter>,
 }
 
 impl Fluid {
     pub fn new(time: f32, diffusion: f32, viscosity: f32) -> Self {
-        let width = 200;
-        let height = 150;
+        let width = 100;
+        let height = 75;
         let size = width * height;
 
         Self {
             width,
             height,
-
             time,
             diffusion,
             viscosity,
-
-            injection_strength: 3.0,
-            injection_radius: 3,
             dissipation: 0.995,
 
-            spawn_x: width / 2,
-            spawn_y: height / 2,
+            density_r: vec![0.0; size],
+            density_g: vec![0.0; size],
+            density_b: vec![0.0; size],
 
-            density: vec![0.0; size],
             px: vec![0.0; size],
             py: vec![0.0; size],
+
+            emitters: vec![
+                {let mut e = Emitter::new(width / 3, height / 2);
+                    e.color = Color32::from_rgb(255, 100, 100);
+                    e.angle = 0.0_f32.to_radians();
+                    e
+                },
+                {let mut e = Emitter::new(2 * width / 3, height / 2);
+                    e.color = Color32::from_rgb(100, 100, 255);
+                    e.angle = 180.0_f32.to_radians();
+                    e
+                },
+            ],
         }
     }
 
-    fn index(&self, x: usize, y: usize) -> usize {
+
+    pub fn index(&self, x: usize, y: usize) -> usize {
         x + y * self.width
     }
 
-    // Continuous emitter
+
     fn inject(&mut self) {
-        let mut rng = rand::thread_rng();
+        for emitter in &self.emitters {
+            let index_fn = |x, y| x + y * self.width;
 
-        for dy in -self.injection_radius..=self.injection_radius {
-            for dx in -self.injection_radius..=self.injection_radius {
-                let x = self.spawn_x as i32 + dx;
-                let y = self.spawn_y as i32 + dy;
-
-                if x > 1 && x < (self.width as i32 - 1)
-                    && y > 1 && y < (self.height as i32 - 1)
-                {
-                    let idx = self.index(x as usize, y as usize);
-
-                    self.density[idx] += 8.0;
-
-                    let angle =
-                        rng.gen_range(0.0..std::f32::consts::TAU);
-
-                    self.px[idx] += angle.cos() * self.injection_strength;
-                    self.py[idx] += angle.sin() * self.injection_strength;
-                }
-            }
+            emitter.inject(
+                self.width,
+                self.height,
+                &mut self.density_r,
+                &mut self.density_g,
+                &mut self.density_b,
+                &mut self.px,
+                &mut self.py,
+                index_fn,
+            );
         }
     }
 
-    pub fn push_velocity(&mut self, cx: usize, cy: usize, strength: f32, radius: usize) {
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let dx = x as i32 - cx as i32;
-                let dy = y as i32 - cy as i32;
-                let dist2 = dx*dx + dy*dy;
-
-                if dist2 < (radius*radius) as i32 {
-                    let idx = self.index(x,y);
-                    let factor = strength / (dist2 as f32 + 1.0);
-                    self.px[idx] += dx as f32 * factor;
-                    self.py[idx] += dy as f32 * factor;
-                }
-            }
-        }
-    }
 
     pub fn step(&mut self) {
+
+        for emitter in &mut self.emitters {
+            emitter.update(self.time);
+        }
+
         self.inject();
 
-        // Diffuse velocity
+        // Diffuse velocity (px, py)
         let mut temp_x = self.px.clone();
         let mut temp_y = self.py.clone();
         self.diffuse(&mut temp_x, &self.px, self.viscosity, self.time);
@@ -106,7 +97,7 @@ impl Fluid {
         self.px.copy_from_slice(&temp_x);
         self.py.copy_from_slice(&temp_y);
 
-        self.project(); // ⭐ ADD HERE
+        self.project();
 
         // Advect velocity
         let vx0 = self.px.clone();
@@ -118,18 +109,29 @@ impl Fluid {
         self.px.copy_from_slice(&new_px);
         self.py.copy_from_slice(&new_py);
 
-        self.project(); // ⭐ ADD AGAIN
+        self.project();
 
-        // Advect density
-        let density0 = self.density.clone();
-        let mut new_density = self.density.clone();
-        self.advect(&mut new_density, &density0, &self.px, &self.py);
-        self.density.copy_from_slice(&new_density);
+        // Advect density channels
+        let r0 = self.density_r.clone();
+        let g0 = self.density_g.clone();
+        let b0 = self.density_b.clone();
+
+        let mut new_r = self.density_r.clone();
+        let mut new_g = self.density_g.clone();
+        let mut new_b = self.density_b.clone();
+
+        self.advect(&mut new_r, &r0, &self.px, &self.py);
+        self.advect(&mut new_g, &g0, &self.px, &self.py);
+        self.advect(&mut new_b, &b0, &self.px, &self.py);
+
+        self.density_r.copy_from_slice(&new_r);
+        self.density_g.copy_from_slice(&new_g);
+        self.density_b.copy_from_slice(&new_b);
 
         // Fade
-        for d in &mut self.density {
-            *d *= self.dissipation;
-        }
+        for d in &mut self.density_r { *d *= self.dissipation; }
+        for d in &mut self.density_g { *d *= self.dissipation; }
+        for d in &mut self.density_b { *d *= self.dissipation; }
     }
 
     pub fn diffuse(&self, x: &mut [f32], x0: &[f32], diffusion: f32, time: f32) {
