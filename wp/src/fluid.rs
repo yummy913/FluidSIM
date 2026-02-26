@@ -2,6 +2,7 @@ use crate::emitter::Emitter;
 use egui::Color32;
 
 pub struct Fluid {
+
     pub width: usize,
     pub height: usize,
 
@@ -22,12 +23,15 @@ pub struct Fluid {
 }
 
 impl Fluid {
+
     pub fn new(time: f32, diffusion: f32, viscosity: f32) -> Self {
+
         let width = 100;
         let height = 75;
         let size = width * height;
 
         Self {
+
             width,
             height,
             time,
@@ -42,12 +46,14 @@ impl Fluid {
             px: vec![0.0; size],
             py: vec![0.0; size],
 
+            //initial emitter values
+
             emitters: vec![
                 {let mut e = Emitter::new(width / 3, height / 2);
                     e.color = Color32::from_rgb(255, 100, 100);
                     e.angle = 0.0_f32.to_radians();
                     e
-                },
+},
                 {let mut e = Emitter::new(2 * width / 3, height / 2);
                     e.color = Color32::from_rgb(100, 100, 255);
                     e.angle = 180.0_f32.to_radians();
@@ -67,16 +73,7 @@ impl Fluid {
         for emitter in &self.emitters {
             let index_fn = |x, y| x + y * self.width;
 
-            emitter.inject(
-                self.width,
-                self.height,
-                &mut self.density_r,
-                &mut self.density_g,
-                &mut self.density_b,
-                &mut self.px,
-                &mut self.py,
-                index_fn,
-            );
+            emitter.inject(self.width, self.height, &mut self.density_r, &mut self.density_g, &mut self.density_b, &mut self.px, &mut self.py, index_fn, );
         }
     }
 
@@ -174,9 +171,7 @@ impl Fluid {
                 let t1 = y - j0 as f32;
                 let t0 = 1.0 - t1;
 
-                d[idx] =
-                    s0*(t0*d0[self.index(i0,j0)] + t1*d0[self.index(i0,j1)]) +
-                    s1*(t0*d0[self.index(i1,j0)] + t1*d0[self.index(i1,j1)]);
+                d[idx] = s0*(t0*d0[self.index(i0,j0)] + t1*d0[self.index(i0,j1)]) + s1*(t0*d0[self.index(i1,j0)] + t1*d0[self.index(i1,j1)]);
             }
         }
     }
@@ -189,11 +184,7 @@ impl Fluid {
         for j in 1..self.height-1 {
             for i in 1..self.width-1 {
                 let idx = self.index(i, j);
-                div[idx] = -0.5 * (
-                    self.px[self.index(i+1,j)] - self.px[self.index(i-1,j)] +
-                    self.py[self.index(i,j+1)] - self.py[self.index(i,j-1)]
-                ) / self.width as f32;
-
+                div[idx] = -0.5 * (self.px[self.index(i+1,j)] - self.px[self.index(i-1,j)] + self.py[self.index(i,j+1)] - self.py[self.index(i,j-1)]) / self.width as f32;
                 p[idx] = 0.0;
             }
         }
@@ -203,13 +194,7 @@ impl Fluid {
             for j in 1..self.height-1 {
                 for i in 1..self.width-1 {
                     let idx = self.index(i,j);
-                    p[idx] = (
-                        div[idx] +
-                        p[self.index(i-1,j)] +
-                        p[self.index(i+1,j)] +
-                        p[self.index(i,j-1)] +
-                        p[self.index(i,j+1)]
-                    ) / 4.0;
+                    p[idx] = (div[idx] + p[self.index(i-1,j)] + p[self.index(i+1,j)] + p[self.index(i,j-1)] + p[self.index(i,j+1)]) / 4.0;
                 }
             }
         }
@@ -219,13 +204,8 @@ impl Fluid {
             for i in 1..self.width-1 {
                 let idx = self.index(i,j);
 
-                self.px[idx] -= 0.5 * (
-                    p[self.index(i+1,j)] - p[self.index(i-1,j)]
-                ) * self.width as f32;
-
-                self.py[idx] -= 0.5 * (
-                    p[self.index(i,j+1)] - p[self.index(i,j-1)]
-                ) * self.height as f32;
+                self.px[idx] -= 0.5 * (p[self.index(i+1,j)] - p[self.index(i-1,j)]) * self.width as f32;
+                self.py[idx] -= 0.5 * (p[self.index(i,j+1)] - p[self.index(i,j-1)]) * self.height as f32;
             }
         }
     }

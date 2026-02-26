@@ -18,27 +18,16 @@ impl Default for Sim {
 }
 
 impl Sim {
-    // --- Add this inside impl Sim, not at top level ---
-    fn handle_emitter_drag(
-        &mut self,
-        response: &egui::Response,
-        rect: egui::Rect,
-        cell_w: f32,
-        cell_h: f32,
-    ) {
-        if !response.dragged() {
-            return;
-        }
+
+    //drag emitter to new location
+
+    fn handle_emitter_drag( &mut self, response: &egui::Response, rect: egui::Rect, cell_w: f32, cell_h: f32, ) {
 
         if let Some(pointer_pos) = response.interact_pointer_pos() {
             let grid_x = ((pointer_pos.x - rect.left()) / cell_w) as i32;
             let grid_y = ((pointer_pos.y - rect.top()) / cell_h) as i32;
 
-            if grid_x < 0
-                || grid_x >= self.fluid.width as i32
-                || grid_y < 0
-                || grid_y >= self.fluid.height as i32
-            {
+            if grid_x < 0 || grid_x >= self.fluid.width as i32 || grid_y < 0 || grid_y >= self.fluid.height as i32 {
                 return;
             }
 
@@ -63,38 +52,25 @@ impl Sim {
         }
     }
 
-    fn draw_emitters(
-        &self,
-        painter: &egui::Painter,
-        rect: egui::Rect,
-        cell_w: f32,
-        cell_h: f32,
-    ) {
+    //draw emitter as circle with arrow for direction
+
+    fn draw_emitters( &self, painter: &egui::Painter, rect: egui::Rect, cell_w: f32, cell_h: f32, ) {
+
         for (_i, emitter) in self.fluid.emitters.iter().enumerate() {
             let emitter_x = rect.left() + emitter.x as f32 * cell_w + cell_w * 0.5;
             let emitter_y = rect.top() + emitter.y as f32 * cell_h + cell_h * 0.5;
 
             let center = egui::pos2(emitter_x, emitter_y);
 
-            painter.circle_filled(
-                center,
-                8.0,
-                emitter.color, // use each emitter's color
-            );
+            painter.circle_filled(center, 8.0, emitter.color, );
 
             let dir_x = emitter.angle.cos();
             let dir_y = emitter.angle.sin();
 
             let arrow_length = 20.0;
-            let arrow_tip = egui::pos2(
-                emitter_x + dir_x * arrow_length,
-                emitter_y + dir_y * arrow_length,
-            );
+            let arrow_tip = egui::pos2(emitter_x + dir_x * arrow_length, emitter_y + dir_y * arrow_length, );
 
-            painter.line_segment(
-                [center, arrow_tip],
-                egui::Stroke::new(2.0, egui::Color32::WHITE),
-            );
+            painter.line_segment([center, arrow_tip], egui::Stroke::new(2.0, egui::Color32::WHITE), );
         }
     }
 }
@@ -140,9 +116,6 @@ impl eframe::App for Sim {
             }
         });
 
-        //egui::Window::new("Smoke color").show(ctx, |ui| {
-        //    ui.color_edit_button_srgba(&mut self.fluid.color);
-        //});
 
         self.fluid.step();
 
@@ -151,6 +124,7 @@ impl eframe::App for Sim {
         //
 
         egui::CentralPanel::default().show(ctx, |ui| {
+
             let (response, painter) = ui.allocate_painter(ui.available_size(), egui::Sense::click_and_drag());
             let rect = response.rect;
 
@@ -165,20 +139,12 @@ impl eframe::App for Sim {
                     let g = self.fluid.density_g[idx].clamp(0.0, 1.0);
                     let b = self.fluid.density_b[idx].clamp(0.0, 1.0);
                 
-                    let color = egui::Color32::from_rgb(
-                        (r * 255.0) as u8,
-                        (g * 255.0) as u8,
-                        (b * 255.0) as u8,
-                    );
+                    let color = egui::Color32::from_rgb((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8, );
                 
                     let px = rect.left() + x as f32 * cell_w;
                     let py = rect.top() + y as f32 * cell_h;
                 
-                    painter.rect_filled(
-                        egui::Rect::from_min_size(egui::pos2(px, py), Vec2::new(cell_w, cell_h)),
-                        0.0,
-                        color,
-                    );
+                    painter.rect_filled(egui::Rect::from_min_size(egui::pos2(px, py), Vec2::new(cell_w, cell_h)), 0.0,color, );
                 }
             }
 
@@ -194,7 +160,7 @@ impl eframe::App for Sim {
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size(Vec2 { x: 1200.0, y: 700.0 }),
+            .with_inner_size(Vec2 { x: 1200.0, y: 700.0 }), //window size
         ..Default::default()
     };
 

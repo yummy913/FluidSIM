@@ -1,5 +1,5 @@
 use rand::Rng;
-use eframe::egui::Color32; // add this
+use eframe::egui::Color32;
 
 pub struct Emitter {
     pub x: usize,
@@ -8,10 +8,11 @@ pub struct Emitter {
     pub radius: usize,
     pub angle: f32,
     pub rotation_speed: f32,
-    pub color: Color32, // <- change from [f32;3]
+    pub color: Color32,
 }
 
 impl Emitter {
+
     pub fn new(x: usize, y: usize) -> Self {
         Self {
             x,
@@ -20,14 +21,13 @@ impl Emitter {
             radius: 1,
             angle: 0.0,
             rotation_speed: 0.0,
-            color: Color32::WHITE, // default white smoke
+            color: Color32::WHITE,
         }
     }
 
     pub fn update(&mut self, dt: f32) {
         self.angle += self.rotation_speed * dt;
 
-        // keep angle in [0, 2π]
         if self.angle > std::f32::consts::TAU {
             self.angle -= std::f32::consts::TAU;
         } else if self.angle < 0.0 {
@@ -36,17 +36,8 @@ impl Emitter {
     }
 
 
-    pub fn inject(
-        &self,
-        width: usize,
-        height: usize,
-        density_r: &mut [f32],
-        density_g: &mut [f32],
-        density_b: &mut [f32],
-        px: &mut [f32],
-        py: &mut [f32],
-        index_fn: impl Fn(usize, usize) -> usize,
-    ) {
+    pub fn inject(&self, width: usize, height: usize, density_r: &mut [f32], density_g: &mut [f32], density_b: &mut [f32], px: &mut [f32], py: &mut [f32], index_fn: impl Fn(usize, usize) -> usize, ) {
+        
         let mut rng = rand::thread_rng();
 
         let r_val = self.color.r() as f32 / 255.0 * self.strength;
