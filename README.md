@@ -1,9 +1,9 @@
 
-install the repo with ```git clone https://github.com/yummy913/FluidSIM.git```
+install the repo with <pre>```git clone https://github.com/yummy913/FluidSIM.git```</pre>
 
-then enter the wp directory ```cd FluidSIM/wp/```
+then enter the wp directory <pre>```cd FluidSIM/wp/```</pre>
 
-run ```cargo run``` to start the fluid simulation
+run <pre>```cargo run```</pre> to start the fluid simulation
 
 functionality:
 
